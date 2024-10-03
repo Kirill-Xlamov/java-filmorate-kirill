@@ -1,10 +1,11 @@
-package ru.yandex.practicum.filmorate.controller;
+package ru.yandex.practicum.filmorate.storage.film.impl;
 
-import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.exception.ObjectNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -12,22 +13,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/films")
+@Component
 @Slf4j
-public class FilmController {
-	Map<Integer, Film> films = new HashMap<>();
+public class InMemoryFilmStorage implements FilmStorage {
+	private final Map<Integer, Film> films = new HashMap<>();
 	private final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 	private int id = 1;
 
-	@GetMapping
+	@Override
 	public List<Film> findAll() {
 		log.info("Количество фильмов {}", films.size());
 		return new ArrayList<>(films.values());
 	}
 
-	@PostMapping
-	public Film add(@Valid @RequestBody Film film) throws ValidationException {
+	@Override
+	public Film add(Film film) {
 		if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
 			log.info("Не пройдена валидация releaseDate");
 			throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года");
@@ -41,15 +41,22 @@ public class FilmController {
 		return film;
 	}
 
-	@PutMapping
-	public Film update(@Valid @RequestBody Film film) throws ValidationException {
+	@Override
+	public Film update(Film film) {
 		int filmId = film.getId();
 		if (!films.containsKey(filmId) || filmId == 0) {
-			throw new ValidationException("Введите фильм, который надо обновить");
+			throw new ObjectNotFoundException("Введите фильм, который надо обновить");
 		}
 		films.put(filmId, film);
 		log.info("Фильм обновлен: {}", film);
 		return film;
+	}
+
+	public Film get(Integer id) {
+		if (!films.containsKey(id)) {
+			throw new ObjectNotFoundException(String.format("Фильм с %s не найден", id));
+		}
+		return films.get(id);
 	}
 
 	private void setLocalFilmId(Film film) {
