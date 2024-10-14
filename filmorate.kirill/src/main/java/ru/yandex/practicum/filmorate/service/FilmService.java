@@ -1,69 +1,104 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.ObjectNotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.model.PopularFilmComparator;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class FilmService {
-	private final FilmStorage filmStorage;
-	private final UserStorage userStorage;
-	Film film;
+@Slf4j
+public class FilmService implements FilmStorage {
+    private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
+    private final FilmStorage filmStorage;
+    private final UserService userService;
 
-	@Autowired
-	public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
-		this.filmStorage = filmStorage;
-		this.userStorage = userStorage;
-	}
+    @Autowired
+    public FilmService(FilmStorage filmStorage, UserService userService) {
+        this.filmStorage = filmStorage;
+        this.userService = userService;
+    }
 
-	public Film addLike(Integer filmId, Integer userId) {
-		film = get(filmId);
-		Set<Integer> likesByUser = film.getLikesByUser();
-		userStorage.get(userId);
-		likesByUser.add(userId);
-		return film;
-	}
+    public Film addLike(Integer filmId, Integer userId) {
+        Film film = get(filmId);
+        Set<Integer> likesByUser = film.getLikesByUser();
+        userService.get(userId);
+        likesByUser.add(userId);
+        log.info("Лайк от пользователя с id:{} добавлен", userId);
+        return film;
+    }
 
-	public Film removeLike(Integer filmId, Integer userId) {
-		film = get(filmId);
-		Set<Integer> likesByUser = film.getLikesByUser();
-		userStorage.get(userId);
-		likesByUser.remove(userId);
-		return film;
-	}
+    public Film removeLike(Integer filmId, Integer userId) {
+        Film film = get(filmId);
+        Set<Integer> likesByUser = film.getLikesByUser();
+        userService.get(userId);
+        likesByUser.remove(userId);
+        log.info("Лайк от пользователя с id:{} удален", userId);
+        return film;
+    }
 
-	public List<Film> popularFilms(Integer count) {
-		return filmStorage.findAll().stream()
-				.sorted(FilmService::compare)
-				.limit(count)
-				.collect(Collectors.toList());
-	}
+    public List<Film> getPopularFilms(Integer count) {
+        List<Film> films = filmStorage.findAll().stream()
+                .sorted(new PopularFilmComparator())
+                .limit(count)
+                .collect(Collectors.toList());
+        log.info("Получен список популярных фильмов в количестве: {} шт.", count);
+        return films;
+    }
 
-	private static int compare(Film film1, Film film2) {
-		int sizeFilm1Likes = film1.getLikesByUser().size();
-		int sizeFilm2Likes = film2.getLikesByUser().size();
-		return sizeFilm2Likes - sizeFilm1Likes;
-	}
+    @Override
+    public Film get(Integer id) {
+        if (!getFilms().containsKey(id)) {
+            throw new ObjectNotFoundException(String.format("Фильм с %s не найден", id));
+        }
+        Film film = filmStorage.get(id);
+        log.info("Получен фильм с id: {}", id);
+        return film;
+    }
 
-	public Film get(Integer id) {
-		return filmStorage.get(id);
-	}
+    @Override
+    public Film add(Film film) {
+        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+            log.info("Не пройдена валидация releaseDate");
+            throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года");
+        }
+        if (film.getId() != 0) {
+            throw new ValidationException("При добавлении id должен быть 0");
+        }
+        Film filmAdded = filmStorage.add(film);
+        log.info("Добавлен новый фильм {}", filmAdded);
+        return filmAdded;
+    }
 
-	public Film add(Film film) {
-		return filmStorage.add(film);
-	}
+    @Override
+    public Map<Integer, Film> getFilms() {
+        log.info("Количество фильмов {}", filmStorage.getFilms().size());
+        return filmStorage.getFilms();
+    }
 
-	public Film update(Film film) {
-		return filmStorage.update(film);
-	}
+    @Override
+    public Film update(Film film) {
+        int filmId = film.getId();
+        if (!filmStorage.getFilms().containsKey(filmId) || filmId == 0) {
+            throw new ObjectNotFoundException("Введите фильм, который надо обновить");
+        }
+        Film filmUpdated = filmStorage.update(film);
+        log.info("Фильм обновлен: {}", film);
+        return filmUpdated;
+    }
 
-	public List<Film> findAll() {
-		return filmStorage.findAll();
-	}
+    @Override
+    public List<Film> findAll() {
+        log.info("Количество найденных фильмов {}", filmStorage.findAll().size());
+        return filmStorage.findAll();
+    }
 }
