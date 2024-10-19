@@ -14,14 +14,6 @@ public class InMemoryUserStorage implements UserStorage {
 	private int id = 1;
 
 	@Override
-	public Map<Integer, User> getUsers() {
-		if (users.isEmpty()) {
-			return Collections.emptyMap();
-		}
-		return new HashMap<>(users);
-	}
-
-	@Override
 	public List<User> findAll() {
 		if (users.isEmpty()) {
 			return Collections.emptyList();

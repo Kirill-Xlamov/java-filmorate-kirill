@@ -12,7 +12,6 @@ import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -61,7 +60,7 @@ public class FilmServiceImpl implements FilmService {
 
 	@Override
 	public Film get(int id) {
-		if (!getFilms().containsKey(id)) {
+		if (filmStorage.get(id) == null) {
 			throw new ObjectNotFoundException(String.format("Фильм с %s не найден", id));
 		}
 		Film film = filmStorage.get(id);
@@ -84,15 +83,9 @@ public class FilmServiceImpl implements FilmService {
 	}
 
 	@Override
-	public Map<Integer, Film> getFilms() {
-		log.info("Количество фильмов {}", filmStorage.getFilms().size());
-		return filmStorage.getFilms();
-	}
-
-	@Override
 	public Film update(Film film) {
 		int filmId = film.getId();
-		if (!filmStorage.getFilms().containsKey(filmId) || filmId == 0) {
+		if (filmStorage.get(filmId) == null || filmId == 0) {
 			throw new ObjectNotFoundException("Введите фильм, который надо обновить");
 		}
 		Film filmUpdated = filmStorage.update(film);

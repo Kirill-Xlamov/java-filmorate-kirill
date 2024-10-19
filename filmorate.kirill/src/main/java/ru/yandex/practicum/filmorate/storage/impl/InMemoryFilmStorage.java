@@ -14,14 +14,6 @@ public class InMemoryFilmStorage implements FilmStorage {
 	private int id = 1;
 
 	@Override
-	public Map<Integer, Film> getFilms() {
-		if (films.isEmpty()) {
-			return Collections.emptyMap();
-		}
-		return new HashMap<>(films);
-	}
-
-	@Override
 	public List<Film> findAll() {
 		if (films.isEmpty()) {
 			return Collections.emptyList();

@@ -10,7 +10,6 @@ import ru.yandex.practicum.filmorate.service.UserService;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -78,12 +77,6 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public Map<Integer, User> getUsers() {
-		log.info("Количество пользователей {}", userStorage.getUsers().size());
-		return userStorage.getUsers();
-	}
-
-	@Override
 	public List<User> findAll() {
 		log.info("Количество найденых пользователей {}", userStorage.findAll().size());
 		return userStorage.findAll();
@@ -107,7 +100,7 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public User update(User user) {
 		int userId = user.getId();
-		if (userId == 0 || !getUsers().containsKey(userId)) {
+		if (userId == 0 || userStorage.get(userId) == null) {
 			throw new ObjectNotFoundException("Введите пользователя, которого надо обновить");
 		}
 		User userUpdated = userStorage.update(user);
@@ -117,7 +110,7 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public User get(int id) {
-		if (!getUsers().containsKey(id)) {
+		if (userStorage.get(id) == null) {
 			throw new ObjectNotFoundException(String.format("Пользователь с id=%s не найден", id));
 		}
 		log.info("Получен пользователь с id: {}", id);
